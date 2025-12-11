@@ -61,7 +61,7 @@ app.get("/lookup/:number", (req, res) => {
 
   const entry = cache.get(phone);
   if (entry) {
-    res.json({ source: "cache", ...entry });
+    res.type("text/plain").send(entry.name);
   } else {
     res.status(404).json({ error: "No match found" });
   }
