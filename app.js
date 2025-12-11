@@ -4,6 +4,8 @@ const axios = require("axios");
 const cache = require("./lib/cache");
 const app = express();
 
+const PHONE_FIELDS = new Set(["phone", "mobile", "work"]);
+
 const normalizePhone = (num) =>
   num.replace(/[^\d]/g, "").replace(/^1?(\d{10})$/, "1$1");
 
@@ -26,9 +28,24 @@ async function preloadPeople() {
 
     for (const person of data) {
       const name = `${person.first_name} ${person.last_name}`;
-      const details = person.details.details;
-      //const details = person.details || {};
-      //const numbers = [details.mobile, details.home, details.work];
+      const details = person.details.details || {};
+      const phones = new Set();
+
+      for (const [fieldKey, fieldVal] of Object.entries(details)) {
+        const key = String(fieldKey).toLowerCase();
+        if (!PHONE_FIELDS.has(key)) continue;
+
+        const raw =
+          typeof fieldVal === "object" && fieldVal != null
+            ? fieldVal.value
+            : fieldVal;
+        const phone = normalizePhone(raw);
+        if (phone) phones.add(phone);
+      }
+      for (const phone of phones) {
+        cache.set(phone, { name });
+        count++;
+      }
     }
 
     console.log(`Cached ${count} phone numbers from Breeze.`);
