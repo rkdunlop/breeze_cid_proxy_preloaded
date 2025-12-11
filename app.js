@@ -12,18 +12,24 @@ async function preloadPeople() {
   try {
     console.log("Preloading Breeze contacts...");
 
-    const filter = { 883493060: "!" };
+    const filter = { 883493060: "*" };
     const encodedFilter = encodeURIComponent(JSON.stringify(filter));
 
     const { data } = await axios.get(
-      `https://${process.env.BREEZE_SUBDOMAIN}.breezechms.com/api/people?filter_json=${encodedFilter}`,
+      `https://${process.env.BREEZE_SUBDOMAIN}.breezechms.com/api/people?details=1&filter_json=${encodedFilter}`,
       {
         headers: { "Api-Key": process.env.BREEZE_API_KEY },
       }
     );
 
     let count = 0;
-    console.log(data);
+
+    for (const person of data) {
+      const name = `${person.first_name} ${person.last_name}`;
+      const details = person.details.details;
+      //const details = person.details || {};
+      //const numbers = [details.mobile, details.home, details.work];
+    }
 
     console.log(`Cached ${count} phone numbers from Breeze.`);
   } catch (err) {
