@@ -67,6 +67,11 @@ app.get("/lookup/:number", (req, res) => {
   }
 });
 
+// Cache inspection endpoint
+app.get("/cache", (req, res) => {
+  res.json(cache.entries());
+});
+
 // Manual refresh endpoint
 app.post("/refresh", async (req, res) => {
   await preloadPeople();
