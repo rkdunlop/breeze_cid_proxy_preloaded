@@ -4,6 +4,9 @@ const axios = require("axios");
 const cache = require("./lib/cache");
 const app = express();
 
+let lastPreloadAt = null;
+let lastPreloadError = null;
+
 const PHONE_FIELDS = new Set(["phone", "mobile", "work"]);
 
 const normalizePhone = (num) => {
@@ -55,8 +58,11 @@ async function preloadPeople() {
     console.log("Cache size:", cache.entries().length);
 
     console.log(`Cached ${count} phone numbers from Breeze.`);
+    let lastPreloadAt = new Date();
+    let lastPreloadError = null;
   } catch (err) {
     console.error("Failed to preload Breeze contacts:", err.message);
+    lastPreloadError = err.message;
   }
 }
 
@@ -82,6 +88,17 @@ app.get("/cache", (req, res) => {
 app.post("/refresh", async (req, res) => {
   await preloadPeople();
   res.json({ message: "Cache refreshed" });
+});
+
+// Health endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    status: lastPreloadError ? "degraded" : "ok",
+    cacheSize: cache.entries().length,
+    lastPreloadAt,
+    error: lastPreloadError,
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
 });
 
 const PORT = process.env.PORT || 3000;
