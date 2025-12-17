@@ -6,8 +6,12 @@ const app = express();
 
 const PHONE_FIELDS = new Set(["phone", "mobile", "work"]);
 
-const normalizePhone = (num) =>
-  num.replace(/[^\d]/g, "").replace(/^1?(\d{10})$/, "1$1");
+const normalizePhone = (num) => {
+  if (!num) return null;
+  return String(num)
+    .replace(/[^\d]/g, "")
+    .replace(/^1?(\d{10})$/, "1$1");
+};
 
 // Preload people on startup
 async function preloadPeople() {
@@ -26,27 +30,29 @@ async function preloadPeople() {
 
     let count = 0;
 
+    const PHONE_KEYS = ["home", "mobile", "work"];
+
     for (const person of data) {
       const name = `${person.first_name} ${person.last_name}`;
       const details = person.details.details || {};
+      console.log("DETAILS KEYS:", Object.keys(details));
+
+      console.log("DETAILS FULL:", JSON.stringify(details, null, 2));
+
       const phones = new Set();
 
-      for (const [fieldKey, fieldVal] of Object.entries(details)) {
-        const key = String(fieldKey).toLowerCase();
-        if (!PHONE_FIELDS.has(key)) continue;
-
-        const raw =
-          typeof fieldVal === "object" && fieldVal != null
-            ? fieldVal.value
-            : fieldVal;
+      for (const key of PHONE_KEYS) {
+        const raw = details[key];
         const phone = normalizePhone(raw);
         if (phone) phones.add(phone);
       }
+
       for (const phone of phones) {
         cache.set(phone, { name });
         count++;
       }
     }
+    console.log("Cache size:", cache.entries().length);
 
     console.log(`Cached ${count} phone numbers from Breeze.`);
   } catch (err) {
