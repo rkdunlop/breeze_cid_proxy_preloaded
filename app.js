@@ -1,11 +1,13 @@
 require("dotenv").config();
 const express = require("express");
-const axios = require("axios");
 const cache = require("./lib/cache");
+const breezeClient = require("./lib/breezeClient");
 const app = express();
 
 let lastPreloadAt = null;
 let lastPreloadError = null;
+let isReady = false;
+let isFirstStarup = true;
 
 const PHONE_FIELDS = new Set(["phone", "mobile", "work"]);
 
@@ -24,13 +26,9 @@ async function preloadPeople() {
     const filter = { 883493060: "*" };
     const encodedFilter = encodeURIComponent(JSON.stringify(filter));
 
-    const { data } = await axios.get(
-      `https://${process.env.BREEZE_SUBDOMAIN}.breezechms.com/api/people?details=1&filter_json=${encodedFilter}`,
-      {
-        headers: { "Api-Key": process.env.BREEZE_API_KEY },
-      }
+    const { data } = await breezeClient.get(
+      `/people?details=1&filter_json=${encodedFilter}`
     );
-
     let count = 0;
 
     const PHONE_KEYS = ["home", "mobile", "work"];
@@ -38,9 +36,6 @@ async function preloadPeople() {
     for (const person of data) {
       const name = `${person.first_name} ${person.last_name}`;
       const details = person.details.details || {};
-      console.log("DETAILS KEYS:", Object.keys(details));
-
-      console.log("DETAILS FULL:", JSON.stringify(details, null, 2));
 
       const phones = new Set();
 
@@ -55,14 +50,26 @@ async function preloadPeople() {
         count++;
       }
     }
-    console.log("Cache size:", cache.entries().length);
+
+    console.log("cache.size():");
 
     console.log(`Cached ${count} phone numbers from Breeze.`);
     let lastPreloadAt = new Date();
     let lastPreloadError = null;
+    isReady = Object.keys(cache.entries()).length > 0;
+    if (Object.keys(cache.entries()).length === 0) {
+      throw new Error("Cache empty after preload");
+    }
+    let isFirstStarup = false;
   } catch (err) {
     console.error("Failed to preload Breeze contacts:", err.message);
     lastPreloadError = err.message;
+    isReady = false;
+
+    if (isFirstStarup) {
+      console.error("Startup preload failed - exiting for PM2 restart");
+      process.exit(1);
+    }
   }
 }
 
@@ -94,10 +101,27 @@ app.post("/refresh", async (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     status: lastPreloadError ? "degraded" : "ok",
-    cacheSize: cache.entries().length,
+    cacheSize: Object.keys(cache.entries()).length,
     lastPreloadAt,
     error: lastPreloadError,
     uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
+// Ready endpoing
+app.get("/ready", (req, res) => {
+  if (!isReady) {
+    return res.status(503).json({
+      status: "not-ready",
+      cacheSize: cache.entries().length,
+      lastPreloadAt,
+    });
+  }
+
+  res.json({
+    status: "ready",
+    cacheSize: cache.entries().length,
+    lastPreloadAt,
   });
 });
 
