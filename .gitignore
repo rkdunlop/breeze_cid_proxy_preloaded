@@ -1,3 +1,6 @@
+
+# Runtime Cache (PII, generated)
+cache.json
 # Node.js dependencies
 /node_modules/
 npm-debug.log*
