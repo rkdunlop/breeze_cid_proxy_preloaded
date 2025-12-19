@@ -14,8 +14,6 @@ let lastPreloadError = null;
 let isReady = false;
 let isFirstStarup = true;
 
-const PHONE_FIELDS = new Set(['phone', 'mobile', 'work']);
-
 function loadCacheFromDisk() {
   try {
     if (!fs.existsSync(CACHE_FILE)) return false;
@@ -112,11 +110,11 @@ async function preloadPeople() {
     saveCacheToDisk();
 
     console.log(`Cached ${count} phone numbers from Breeze.`);
-    let lastPreloadAt = new Date();
-    let lastPreloadError = null;
-    isReady = Object.keys(cache.entries()).length > 0;
+    lastPreloadAt = new Date();
+    lastPreloadError = null;
+    isReady = cache.size() > 0;
 
-    let isFirstStarup = false;
+    isFirstStarup = false;
   } catch (err) {
     console.error('Failed to preload Breeze contacts:', err.message);
     lastPreloadError = err.message;
