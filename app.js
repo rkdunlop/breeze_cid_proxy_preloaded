@@ -51,8 +51,6 @@ async function preloadPeople() {
       }
     }
 
-    console.log("cache.size():");
-
     console.log(`Cached ${count} phone numbers from Breeze.`);
     let lastPreloadAt = new Date();
     let lastPreloadError = null;
@@ -101,7 +99,7 @@ app.post("/refresh", async (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     status: lastPreloadError ? "degraded" : "ok",
-    cacheSize: Object.keys(cache.entries()).length,
+    cacheSize: cache.size(),
     lastPreloadAt,
     error: lastPreloadError,
     uptimeSeconds: Math.floor(process.uptime()),
@@ -113,14 +111,14 @@ app.get("/ready", (req, res) => {
   if (!isReady) {
     return res.status(503).json({
       status: "not-ready",
-      cacheSize: cache.entries().length,
+      cacheSize: cache.size(),
       lastPreloadAt,
     });
   }
 
   res.json({
     status: "ready",
-    cacheSize: cache.entries().length,
+    cacheSize: cache.size(),
     lastPreloadAt,
   });
 });
